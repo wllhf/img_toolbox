@@ -134,9 +134,16 @@ def evaluate_object_category(ground_truth, prediction, min_iou=0.5):
     -------
     (precision, recall, tp, fp) : float, float, int, int
     """
-    ious = [[iou(gt, p) for gt in ground_truth] for p in prediction]
+    # edge cases
+    if len(prediction) == 0 and len(ground_truth) > 0:
+        return 0.0, 0.0, 0.0, 0.0
+    if len(prediction) == 0 and len(ground_truth) == 0:
+        return 1.0, 1.0, 0.0, 0.0
+    if len(prediction) > 0 and len(ground_truth) == 0:
+        return 0.0, 1.0, 0.0, len(prediction)
 
     # predictions that intersect with multiple objects are associated by greatest iou
+    ious = [[iou(gt, p) for gt in ground_truth] for p in prediction]
     association = [max(enumerate(lst), key=lambda x:x[1]) for lst in ious]  # generates (key, value) pairs
 
     # only predictions with iou > min_iou are associated
