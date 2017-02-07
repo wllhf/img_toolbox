@@ -1,7 +1,12 @@
 """
 This file contains basic functionality for the handling of data sets and sampling data points from data sets.
 """
+import os
 import numpy as np
+
+from skimage.io import imread
+
+import io as tbx_io
 
 
 def grid_sample_coords(img_shape, grid_size, max_patch_size=np.array([0, 0])):
@@ -30,13 +35,15 @@ def grid_sample_coords(img_shape, grid_size, max_patch_size=np.array([0, 0])):
     return np.hstack([ty, rx]).astype('uint16')
 
 
-def generate_grid_samples(imgs, grid_size, max_patch_size):
+def generate_grid_samples(path, file_names, grid_size, max_patch_size):
     """ Get the patch coordinates using a regular grid of a list of images given the sample parameters.
 
     Parameters:
     -----------
-    imgs: list
-      List of images.
+    path: string
+      Path to image files.
+    file_names: list of strings
+      List of file names of images.
     grid_size: numpy array (2,)
       Distance in y and x direction between samples.
     max_patch_size: numpy array (2,)
@@ -47,9 +54,10 @@ def generate_grid_samples(imgs, grid_size, max_patch_size):
     samples: numpy array (n, 3)
       The first column is the image index, second and third are the pixel coordinates.
     """
+    file_names = tbx_io.get_full_names(path, file_names)
     samples = []
-    for i, img in enumerate(imgs):
-        h, w = img.shape[:2]
+    for i, name in enumerate(file_names):
+        h, w = imread(os.path.join(path, name)).shape[:2]
         coords = grid_sample_coords(np.array((h, w)), grid_size, max_patch_size)
         samples.append(np.hstack([np.ones((coords.shape[0], 1), dtype='uint16')*i, coords]))
 
