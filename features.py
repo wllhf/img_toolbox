@@ -1,5 +1,5 @@
 """
-This file contains functionality to generate low-level features as derivatives and HOG-like features.
+This file contains functionality to generate low-level features such as derivatives and HOG-like features.
 """
 import numpy as np
 from scipy.ndimage.filters import convolve

@@ -2,7 +2,7 @@
 This file contains various utility functions.
 """
 import os
-import numpy as np
+
 from skimage.io import imread
 
 
