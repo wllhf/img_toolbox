@@ -4,35 +4,8 @@ This file contains basic functionality for the handling of data sets and samplin
 import numpy as np
 
 
-def generate_samples(imgs, grid_size, max_patch_size):
-    """ Generate samples.
-
-    Parameters:
-    -----------
-    imgs: list
-      List of images.
-    grid_size: numpy array (2,)
-      Distance in y and x direction between samples.
-    max_patch_size: numpy array (2,)
-      Maximum size of sample patch (defines border size of unused pixels).
-
-    Return:
-    -------
-    sample_set: tuple
-      List of sample coordinates. Sample coordinates are an array with shape (n, 3).
-      The first index is the image index, second and third are the pixel coordinates.
-    """
-    samples = []
-    for i, img in enumerate(imgs):
-        h, w = img.shape[:2]
-        coords = grid_sample_coords(np.array((h, w)), grid_size, max_patch_size)
-        samples.append(np.hstack([np.ones((coords.shape[0], 1), dtype='uint16')*i, coords]))
-
-    return np.vstack(samples).astype('uint16')
-
-
 def grid_sample_coords(img_shape, grid_size, max_patch_size=np.array([0, 0])):
-    """ Get the patch coordinates of an image given the sample parameters.
+    """ Get the patch coordinates using a regular grid of an image given the sample parameters.
 
     Parameters:
     -----------
@@ -57,12 +30,38 @@ def grid_sample_coords(img_shape, grid_size, max_patch_size=np.array([0, 0])):
     return np.hstack([ty, rx]).astype('uint16')
 
 
+def generate_grid_samples(imgs, grid_size, max_patch_size):
+    """ Get the patch coordinates using a regular grid of a list of images given the sample parameters.
+
+    Parameters:
+    -----------
+    imgs: list
+      List of images.
+    grid_size: numpy array (2,)
+      Distance in y and x direction between samples.
+    max_patch_size: numpy array (2,)
+      Maximum size of sample patch (defines border size of unused pixels).
+
+    Return:
+    -------
+    samples: numpy array (n, 3)
+      The first column is the image index, second and third are the pixel coordinates.
+    """
+    samples = []
+    for i, img in enumerate(imgs):
+        h, w = img.shape[:2]
+        coords = grid_sample_coords(np.array((h, w)), grid_size, max_patch_size)
+        samples.append(np.hstack([np.ones((coords.shape[0], 1), dtype='uint16')*i, coords]))
+
+    return np.vstack(samples).astype('uint16')
+
+
 def filter_set(classes, samples, labels, arrays=None):
     """ Filter out data points by class label.
 
     Parameters:
     -----------
-    classes: list
+    classes: list or int
       Labels of classes to be filtered out of the data set.
     labels: numpy array (n,)
       Class labels.
@@ -75,6 +74,7 @@ def filter_set(classes, samples, labels, arrays=None):
       Filtered labels array and list of arrays.
     """
     if classes:
+        classes = classes if type(classes) == list else [classes]
         indices = np.squeeze(np.logical_not(sum([labels == l for l in classes])))
         if arrays is not None:
             return samples[indices], labels[indices], [a[indices] for a in arrays]
@@ -209,5 +209,3 @@ def class_to_color(gt, cmap):
     for i, color in enumerate(cmap):
         new[gt == i] = color
     return new
-
-
