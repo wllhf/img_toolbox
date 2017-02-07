@@ -26,7 +26,8 @@ def grid_sample_coords(img_shape, grid_size, max_patch_size=np.array([0, 0])):
     coords: numpy array (n,2) dtype `uint16`
       Array of matrix coordinates (y, x).
     """
-    start = max_patch_size/2
+    grid_size, max_patch_size = np.array(grid_size), np.array(max_patch_size)
+    start = np.array(max_patch_size)/2
     end = img_shape[:2] - max_patch_size/2
     x = np.arange(start[1], end[1], grid_size[1])
     y = np.arange(start[0], end[0], grid_size[0])
