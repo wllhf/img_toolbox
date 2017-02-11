@@ -9,6 +9,26 @@ from skimage.io import imread
 from io import get_full_names
 
 
+def one_hot_repr(labels, max_label=None):
+    """ Returns one-hot representation of labels.
+
+    Parameters:
+    -----------
+    labels: numpy array (n,)
+      Containing label information.
+    max_label: int (default: None)
+      Highest label in dataset. If None max_label is labels.max().
+
+    Return:
+    -------
+    onehot: numpy array (n, max_label+1)
+    """
+    max_label = labels.max()+1 if max_label is None else max_label+1
+    onehot = np.zeros((labels.shape[0], max_label), dtype='uint8')
+    onehot[np.arange(labels.shape[0]), np.squeeze(labels)] = 1
+    return onehot
+
+
 def class_labels(limg, omit=[], min_area=0.1, bboxes=None, coords=None, patch_size=[25, 25], dtype='uint16'):
     """ Returns dominating class of image or image regions given by bboxes xor coords and patch_size.
 
