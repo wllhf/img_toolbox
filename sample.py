@@ -9,6 +9,49 @@ from skimage.io import imread
 import io as tbx_io
 
 
+def at(img, coords, patch_size, flatten=True, ignore=False, contiguous=False):
+    """ Returns patches.
+
+    Parameters:
+    -----------
+    img: numpy array (n, m, c)
+    coords: array like (k, 2)
+    patch_size: array like (2,)
+    flatten: bool (default: False)
+      Patch gets row-wise flattened if True.
+    ignore: bool (default: False)
+      unused
+    contiguous: bool (default: False)
+      Returns contiguous array.
+
+    Return:
+    -------
+    patches: numpy array (k, patch_size, c) or (k, prod(patch_size)*c) if flattened
+
+    Note:
+    -----
+    Multichannel images are flattened in a way such that the first c elements of the
+    flattened patch are the values of the c channels of the first pixel.
+    """
+    coords, patch_size = np.array(coords), np.array(patch_size)
+    img = img if len(img.shape) == 3 else np.expand_dims(img, axis=2)
+    s = coords - patch_size/2
+    e = coords + (patch_size-1)/2 + 1
+
+    valid = (((0, 0) <= s) * (e <= img.shape[:2])).all(axis=1)
+    if not valid.all():
+        if ignore:
+            s, e = s[valid], e[valid]
+        else:
+            raise ValueError("given image, patch coordinates and patch size incompatible")
+
+    patches = [np.squeeze(img[s[i, 0]:e[i, 0], s[i, 1]:e[i, 1], :]) for i in range(s.shape[0])]
+    patches = [patch.flatten() for patch in patches] if flatten else patches
+    patches = np.stack(patches)
+    patches = np.ascontiguousarray(patches) if contiguous else patches
+    return patches
+
+
 def grid_sample_coords(img_shape, grid_size, max_patch_size=np.array([0, 0])):
     """ Get the patch coordinates using a regular grid of an image given the sample parameters.
 
