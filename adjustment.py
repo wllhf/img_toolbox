@@ -29,7 +29,7 @@ def per_image_standardization(images):
     ValueError: if shape of images is incompatible with this funciton (len(images.shape) != 4)
     """
     if len(images.shape) != 4:
-        raise ValueError("given image shape is not incompatible (!=4)")
+        raise ValueError("given image shape is not compatible (!=4)")
 
     if np.issubdtype(images.dtype, np.integer):
         images = images / np.iinfo(images.dtype).max
