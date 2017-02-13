@@ -20,13 +20,17 @@ def at(img, coords, patch_size, flatten=True, ignore=False, contiguous=False):
     flatten: bool (default: False)
       Patch gets row-wise flattened if True.
     ignore: bool (default: False)
-      unused
+      Ignores coordinates with incompatible image shape and patch size. May leads to return of empty array.
     contiguous: bool (default: False)
       Returns contiguous array.
 
     Return:
     -------
     patches: numpy array (k, patch_size, c) or (k, prod(patch_size)*c) if flattened
+
+    Raises:
+    -------
+    ValueError if given image, patch coordinates and patch size incompatible
 
     Note:
     -----
@@ -47,8 +51,13 @@ def at(img, coords, patch_size, flatten=True, ignore=False, contiguous=False):
 
     patches = [np.squeeze(img[s[i, 0]:e[i, 0], s[i, 1]:e[i, 1], :]) for i in range(s.shape[0])]
     patches = [patch.flatten() for patch in patches] if flatten else patches
-    patches = np.stack(patches)
-    patches = np.ascontiguousarray(patches) if contiguous else patches
+
+    if len(patches) > 0:
+        patches = np.stack(patches)
+        patches = np.ascontiguousarray(patches) if contiguous else patches
+    else:
+        patches = np.empty(0)
+
     return patches
 
 
