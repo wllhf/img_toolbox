@@ -52,6 +52,20 @@ def at(img, coords, patch_size, flatten=True, ignore=False, contiguous=False):
     return patches
 
 
+def generate_patches(path, file_names, samples, patch_size, flatten=True, ignore=False, contiguous=False):
+    """ """
+    patches = []
+    file_names = tbx_io.get_full_names(path, file_names)
+    img_indices = np.unique(samples[:, 0])
+    for idx in img_indices:
+        indices = samples[:, 0] == idx
+        coords = samples[indices, 1:]
+        patches.append(at(imread(os.path.join(path, file_names[idx])), coords, patch_size,
+                          flatten=flatten, ignore=ignore, contiguous=contiguous))
+
+    return np.vstack(patches)
+
+
 def grid_sample_coords(img_shape, grid_size, max_patch_size=np.array([0, 0])):
     """ Get the patch coordinates using a regular grid of an image given the sample parameters.
 
