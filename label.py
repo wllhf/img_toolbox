@@ -6,7 +6,7 @@ import numpy as np
 
 from skimage.io import imread
 
-from io import get_full_names
+from .io import get_full_names
 
 
 def one_hot_repr(labels, max_label=None):
