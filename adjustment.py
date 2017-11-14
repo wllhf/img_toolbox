@@ -11,12 +11,12 @@ def per_image_standardization(images):
 
     Parameters:
     -----------
-    images: numpy array (n, k, l, c)
+    images: numpy array (n, k, l, c), (n, k, l) or (n, k*l*c)
       Images.
 
     Return:
     -------
-    images: numpy array (n, k, l, c)
+    images: numpy array (n, k, l, c), (n, k, l) or (n, k*l*c)
 
     Note:
     -----
@@ -26,15 +26,20 @@ def per_image_standardization(images):
 
     Raises:
     -------
-    ValueError: if shape of images is incompatible with this funciton (len(images.shape) != 4)
+    ValueError: if shape of images is incompatible with this function
     """
-    if len(images.shape) != 4:
-        raise ValueError("given image shape is not compatible (!=4)")
-
     if np.issubdtype(images.dtype, np.integer):
         images = images / np.iinfo(images.dtype).max
 
-    mean, std = images.mean(axis=(1, 2, 3), keepdims=True), images.std(axis=(1, 2, 3), keepdims=True)
+    if len(images.shape) == 2:
+        mean, std = images.mean(axis=1, keepdims=True), images.std(axis=1, keepdims=True)
+    elif len(images.shape) == 3:
+        mean, std = images.mean(axis=(1, 2), keepdims=True), images.std(axis=(1, 2), keepdims=True)
+    elif len(images.shape) == 4:
+        mean, std = images.mean(axis=(1, 2, 3), keepdims=True), images.std(axis=(1, 2, 3), keepdims=True)
+    else:
+        raise ValueError("given image shape is not compatible")
+
     images = images - mean
     images = images / np.maximum(std, 1.0 / np.prod(images.shape[1:]))
     return images
