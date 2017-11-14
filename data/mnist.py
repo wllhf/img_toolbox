@@ -47,7 +47,8 @@ class mnist():
 
 
 if __name__ == "__main__":
-    mnist = mnist("~/data/mnist/", 100)
+    mnist = mnist("~/data/mnist/")
     img, lbl = mnist.train()
     print(img.shape, lbl.shape)
-
+    img, lbl = mnist.test()
+    print(img.shape, lbl.shape)
