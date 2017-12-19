@@ -1,4 +1,4 @@
-""" MNIST is a database of handwritten digits available on http://yann.lecun.com/exdb/mnist/. """
+""" MNIST is a dataset of handwritten digits available on http://yann.lecun.com/exdb/mnist/. """
 
 import os
 import struct
