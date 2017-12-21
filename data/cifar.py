@@ -44,7 +44,7 @@ class cifar10():
             img = img.transpose(0, 2, 3, 1)
 
         if not integral:
-            img = np.array(img, dtype=float) / 255.0
+            img = img / 255.0
 
         return (img, lbl)
 
@@ -59,7 +59,7 @@ class cifar10():
             img = img.transpose(0, 2, 3, 1)
 
         if not integral:
-            img = np.array(img, dtype=float) / 255.0
+            img = img / 255.0
 
         return (img, lbl)
 
