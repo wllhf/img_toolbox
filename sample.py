@@ -6,7 +6,7 @@ import numpy as np
 
 from skimage.io import imread
 
-import io as tbx_io
+from .data.util import get_full_names
 
 
 def at(img, coords, patch_size, flatten=True, ignore=False, contiguous=False):
@@ -64,7 +64,7 @@ def at(img, coords, patch_size, flatten=True, ignore=False, contiguous=False):
 def generate_patches(path, file_names, samples, patch_size, flatten=True, ignore=False, contiguous=False):
     """ """
     patches = []
-    file_names = tbx_io.get_full_names(path, file_names)
+    file_names = get_full_names(path, file_names)
     img_indices = np.unique(samples[:, 0])
     for idx in img_indices:
         indices = samples[:, 0] == idx
@@ -75,7 +75,7 @@ def generate_patches(path, file_names, samples, patch_size, flatten=True, ignore
     return np.vstack(patches)
 
 
-def grid_sample_coords(img_shape, grid_size, max_patch_size=np.array([0, 0])):
+def grid_sample_coords(img_shape, grid_size, max_patch_size=(0, 0)):
     """ Get the patch coordinates using a regular grid of an image given the sample parameters.
 
     Parameters:
@@ -121,7 +121,7 @@ def generate_grid_samples(path, file_names, grid_size, max_patch_size):
     samples: numpy array (n, 3)
       The first column is the image index, second and third are the pixel coordinates.
     """
-    file_names = tbx_io.get_full_names(path, file_names)
+    file_names = get_full_names(path, file_names)
     samples = []
     for i, name in enumerate(file_names):
         h, w = imread(os.path.join(path, name)).shape[:2]

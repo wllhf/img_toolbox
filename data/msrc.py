@@ -4,6 +4,7 @@ import os
 from skimage import img_as_float
 
 from .util import load_images, load_images_into_array, color_to_class
+from ..sample import generate_grid_samples
 
 dir_img = "Images"
 dir_lbl = "GroundTruth"
@@ -48,8 +49,17 @@ class msrc:
     def _color_to_class(self, lbl):
         return color_to_class(lbl, color_map)
 
-    def _prepare_data(self, fname, arrays=None, lbl_type='class', integral=True):
-        file_list = sorted(open(os.path.join(self.path, dir_spl, fname), 'r').read().splitlines())
+    def _file_list(self, subset='train'):
+        if subset == 'train':
+            fname = f_train
+        if subset == 'val':
+            fname = f_val
+        if subset == 'test':
+            fname = f_test
+
+        return sorted(open(os.path.join(self.path, dir_spl, fname), 'r').read().splitlines())
+
+    def _prepare_data(self, file_list, arrays=None, lbl_type='class', integral=True):
         file_list_lbl = [os.path.splitext(n)[0]+'_GT'+os.path.splitext(n)[1] for n in file_list]
 
         if arrays is not None:
@@ -69,17 +79,17 @@ class msrc:
 
             return (imgs, lbls)
 
-    def train(self, arrays=None, lbl_type='class', integral=True):
-        """ If arrays are given they should have the shape (276, 320, 320, c)."""
-        return self._prepare_data(f_train, arrays=arrays, lbl_type=lbl_type, integral=integral)
+    def generate_grid_samples(self, subset='train', grid_size=(5, 5), max_patch_size=(11, 11)):
+        file_list = self._file_list(subset)
+        return generate_grid_samples(os.path.join(self.path, dir_img), file_list, grid_size, max_patch_size)
 
-    def val(self, arrays=None, lbl_type='class', integral=True, dtype='float32'):
-        """ If arrays are given they should have the shape (59, 320, 320, c)."""
-        return self._prepare_data(f_val, arrays=arrays, lbl_type=lbl_type, integral=integral)
-
-    def test(self, arrays=None, lbl_type='class', integral=True, dtype='float32'):
-        """ If arrays are given they should have the shape (256, 320, 320, c)."""
-        return self._prepare_data(f_test, arrays=arrays, lbl_type=lbl_type, integral=integral)
+    def data(self, subset='train', arrays=None, lbl_type='class', integral=True):
+        """
+        If arrays are given they should have the shape (n, 320, 320, c) with
+        n=276 for train, 59 for val and 256 for test.
+        """
+        file_list = self._file_list(subset)
+        return self._prepare_data(file_list, arrays=arrays, lbl_type=lbl_type, integral=integral)
 
 
 if __name__ == "__main__":

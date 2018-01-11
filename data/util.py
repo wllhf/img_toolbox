@@ -30,7 +30,8 @@ def array_from_list(imgs):
     array = np.zeros([len(imgs), row_max, col_max, nchannels])
     for i, img in enumerate(imgs):
         rows, cols, chans = img.shape
-        array[i, :rows, :cols, :chans] = imgs[i]
+        img = np.expand_dims(img, axis=3) if len(img.shape) < 4 else img
+        array[i, :rows, :cols, :chans] = img
 
     return array
 
@@ -107,5 +108,8 @@ def load_images_into_array(array, path, files=None, func=None):
 
     for i, f in enumerate(load):
         img = imread(os.path.join(path, f))
+        img = img if func is None else func(img)
+        if len(array.shape) == 4 and len(img.shape) == 2:
+            img = np.expand_dims(img, axis=2)
         rows, cols, chans = img.shape
-        array[i, :rows, :cols, :chans] = img if func is None else func(img)
+        array[i, :rows, :cols, :chans] = img
