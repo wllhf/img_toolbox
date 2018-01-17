@@ -130,6 +130,8 @@ def reshape(coords, values, shape=None):
     matrix: numpy array
     """
     shape = (coords[:, 0].max(), coords[:, 1].max()) if shape is None else shape[:2]
+    if type(values) == list:
+        values = np.vstack(values)
     if len(values.shape) > 1:
         shape = (shape[0], shape[1], values.shape[1])
     matrix = np.zeros(shape, dtype=values.dtype)
