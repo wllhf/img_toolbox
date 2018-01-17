@@ -5,6 +5,8 @@ from __future__ import division
 
 import numpy as np
 
+from skimage import img_as_float
+
 
 def per_image_standardization(images):
     """ Scales images to zero mean and unit norm (image - mean) / capped_stddev.
@@ -29,7 +31,7 @@ def per_image_standardization(images):
     ValueError: if shape of images is incompatible with this function
     """
     if np.issubdtype(images.dtype, np.integer):
-        images = images / np.iinfo(images.dtype).max
+        images = img_as_float(images)
 
     if len(images.shape) == 2:
         mean, std = images.mean(axis=1, keepdims=True), images.std(axis=1, keepdims=True)
