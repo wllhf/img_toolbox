@@ -9,6 +9,26 @@ import numpy as np
 from skimage.io import imread
 
 
+class imglst:
+    def __init__(self, path, flist=None):
+        self.path = path
+        self.flist = os.listdir(path) if flist is None else flist
+        self.cur = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.next()
+
+    def next(self):
+        if self.cur < len(self.flist):
+            self.cur = self.cur + 1
+            return imread(os.path.join(self.path, self.flist[self.cur-1]))
+        else:
+            raise StopIteration()
+
+
 def get_shared_numpy_array(shape, dtype):
     """
     shape: tuple
@@ -45,6 +65,16 @@ def color_to_class(img, cmap):
     return new
 
 
+def class_to_color(img, cmap):
+    """ Class ground truth to matrix of colors. """
+    chans = len(cmap[list(cmap)[0]][1])
+    dtype = np.min_scalar_type(max([max(cmap[k][1]) for k in cmap.keys()]))
+    new = np.empty((img.shape[0], img.shape[1], chans), dtype=dtype)
+    for key in cmap:
+        new[img == cmap[key][0]] = cmap[key][1]
+    return new
+
+
 def get_full_names(path, files):
     """ Get names of files including extension from file names without extension.
 
@@ -68,7 +98,7 @@ def get_full_names(path, files):
     return names
 
 
-def load_images(path, files=None):
+def load_images(path, files=None, generator=False):
     """ Loads images by name. File extension is not considered.
 
     Parameter:
@@ -86,7 +116,10 @@ def load_images(path, files=None):
     else:
         load = get_full_names(path, files)
 
-    return [imread(os.path.join(path, f)) for f in load]
+    if generator:
+        return imglst(path, load)
+    else:
+        return [imread(os.path.join(path, f)) for f in load]
 
 
 def load_images_into_array(array, path, files=None, func=None):
