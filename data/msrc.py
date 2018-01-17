@@ -1,10 +1,12 @@
 """ MSRCv2. Using TextonBoostSplits from jamie.shotton.org/work/data/TextonBoostSplits.zip"""
 import os
 
+from skimage.io import imread
 from skimage import img_as_float
 
-from .util import load_images, load_images_into_array, color_to_class
-from ..sample import generate_grid_samples
+from ..adjustment import per_image_standardization
+from .util import load_images, load_images_into_array, color_to_class, class_to_color
+from .sample import generate_grid_samples
 
 dir_img = "Images"
 dir_lbl = "GroundTruth"
@@ -41,55 +43,105 @@ color_map = {
 }
 
 
+def to_class(img):
+    return color_to_class(img, color_map)
+
+
+def to_color(img):
+    return class_to_color(img, color_map)
+
+
+def file_list(path, subset='train'):
+    if subset == 'train':
+        fname = f_train
+    if subset == 'val':
+        fname = f_val
+    if subset == 'test':
+        fname = f_test
+
+    return sorted(open(os.path.join(path, dir_spl, fname), 'r').read().splitlines())
+
+
+class msrc_gen:
+    def __init__(self, path, subset='train', lbl_type=None, integral=True, standardize=False):
+        self.lbl_type = lbl_type
+        self.integral = integral
+        self.standardize = standardize
+        self.path = os.path.expanduser(path)
+        self.flist_img = file_list(self.path, subset)
+        self.flist_lbl = [os.path.splitext(n)[0]+'_GT'+os.path.splitext(n)[1] for n in self.flist_img]
+        self.cur = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.next()
+
+    def __len__(self):
+        return len(self.flist_img)
+
+    def next(self):
+        if self.cur < len(self.flist_img):
+            self.cur = self.cur + 1
+            img = imread(os.path.join(self.path, dir_img, self.flist_img[self.cur-1]))
+            img = img if self.integral else img_as_float(img)
+            img = per_image_standardization(img) if self.standardize else img
+
+            if self.lbl_type is None:
+                return img
+            else:
+                lbl = imread(os.path.join(self.path, dir_lbl, self.flist_lbl[self.cur-1]))
+                lbl = color_to_class(lbl, color_map) if self.lbl_type == 'class' else lbl
+                return img, lbl
+        else:
+            raise StopIteration()
+
+
 class msrc:
 
     def __init__(self, path):
         self.path = os.path.expanduser(path)
 
-    def _color_to_class(self, lbl):
-        return color_to_class(lbl, color_map)
-
-    def _file_list(self, subset='train'):
-        if subset == 'train':
-            fname = f_train
-        if subset == 'val':
-            fname = f_val
-        if subset == 'test':
-            fname = f_test
-
-        return sorted(open(os.path.join(self.path, dir_spl, fname), 'r').read().splitlines())
-
-    def _prepare_data(self, file_list, arrays=None, lbl_type='class', integral=True):
-        file_list_lbl = [os.path.splitext(n)[0]+'_GT'+os.path.splitext(n)[1] for n in file_list]
+    def _prepare_data(self, flist, arrays=None, lbl_type='class', integral=True, standardize=False):
+        flist_lbl = [os.path.splitext(n)[0]+'_GT'+os.path.splitext(n)[1] for n in flist]
 
         if arrays is not None:
             func = None if integral else img_as_float
-            load_images_into_array(arrays[0], os.path.join(self.path, dir_img), file_list, func=func)
-            func = None if lbl_type == 'color' else self._color_to_class
-            load_images_into_array(arrays[1], os.path.join(self.path, dir_lbl), file_list_lbl, func=func)
+            func = per_image_standardization if standardize else func
+            load_images_into_array(arrays[0], os.path.join(self.path, dir_img), flist, func=func)
+            func = None if lbl_type == 'color' else to_class
+            load_images_into_array(arrays[1], os.path.join(self.path, dir_lbl), flist_lbl, func=func)
         else:
-            imgs = load_images(os.path.join(self.path, dir_img), file_list)
-            lbls = load_images(os.path.join(self.path, dir_lbl), file_list_lbl)
+            imgs = load_images(os.path.join(self.path, dir_img), flist)
+            lbls = load_images(os.path.join(self.path, dir_lbl), flist_lbl)
 
             if lbl_type == 'class':
-                lbls = [self._color_to_class(lbl) for lbl in lbls]
+                lbls = [to_class(lbl, color_map) for lbl in lbls]
 
             if not integral:
                 imgs = [img_as_float(img) for img in imgs]
 
+            if standardize:
+                imgs = [per_image_standardization(img) for img in imgs]
+
             return (imgs, lbls)
 
     def generate_grid_samples(self, subset='train', grid_size=(5, 5), max_patch_size=(11, 11)):
-        file_list = self._file_list(subset)
-        return generate_grid_samples(os.path.join(self.path, dir_img), file_list, grid_size, max_patch_size)
+        flist = file_list(self.path, subset)
+        return generate_grid_samples(os.path.join(self.path, dir_img), flist, grid_size, max_patch_size)
 
-    def data(self, subset='train', arrays=None, lbl_type='class', integral=True):
+    def data(self, subset='train', arrays=None, lbl_type='class', integral=True, standardize=False):
         """
         If arrays are given they should have the shape (n, 320, 320, c) with
         n=276 for train, 59 for val and 256 for test.
         """
-        file_list = self._file_list(subset)
-        return self._prepare_data(file_list, arrays=arrays, lbl_type=lbl_type, integral=integral)
+        flist = file_list(self.path, subset)
+        return self._prepare_data(flist,
+                                  arrays=arrays,
+                                  lbl_type=lbl_type,
+                                  integral=integral,
+                                  standardize=standardize)
 
 
 if __name__ == "__main__":
