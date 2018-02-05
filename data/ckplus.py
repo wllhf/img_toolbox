@@ -2,12 +2,13 @@
 import os
 
 import numpy as np
+from skimage import img_as_float
 from skimage.io import imread
 from skimage.color import rgb2gray
 from skimage.transform import resize
 
 from ..adjustment import per_image_standardization
-from .util import load_images, load_images_into_array, color_to_class, class_to_color
+from ..label import one_hot_repr
 
 dir_img = "cohn-kanade-images"
 dir_emo = "Emotion"
@@ -33,16 +34,27 @@ def emotion_imgs(path):
     return imgs, lbls, subs
 
 
+def prepare_data(imgs, lbls, subs, img_size=[64, 64], one_hot=True, standardize=True):
+    imgs = [np.expand_dims(rgb2gray(img), axis=2) for img in imgs]
+    imgs = [img_as_float(img) for img in imgs]
+    if standardize:
+        imgs = [per_image_standardization(img) for img in imgs]
+    imgs = [resize(img, img_size, mode='reflect') for img in imgs]
+    imgs = np.array(imgs).astype('float32')
+    lbls, subs = np.array(lbls), np.array(subs)
+    if one_hot:
+        lbls = one_hot_repr(lbls)
+
+    return imgs, lbls, subs
+
+
 class leave_one_out_gen:
 
-    def __init__(self, path, img_size=[64, 64], lbl_type='emo', standardize=True):
+    def __init__(self, path, img_size=[64, 64], lbl_type='emo', one_hot=True, standardize=True):
         if lbl_type == 'emo':
             self.imgs, self.lbls, self.subs = emotion_imgs(path)
-            self.imgs = [rgb2gray(img) for img in self.imgs]
-            if standardize:
-                self.imgs = [per_image_standardization(img) for img in self.imgs]
-            self.imgs = np.array([resize(img, img_size, mode='reflect') for img in self.imgs])
-            self.lbls, self.subs = np.array(self.lbls), np.array(self.subs)
+            self.imgs, self.lbls, self.subs = prepare_data(self.imgs, self.lbls, self.subs,
+                                                           img_size=[64, 64], one_hot=True, standardize=True)
             self.unique = np.unique(self.subs)
         else:
             return NotImplementedError
@@ -69,10 +81,23 @@ class leave_one_out_gen:
             raise StopIteration()
 
 
+def get_data(path, img_size=[64, 64], lbl_type='emo', one_hot=True, standardize=True):
+        if lbl_type == 'emo':
+            imgs, lbls, subs = emotion_imgs(path)
+            imgs, lbls, subs = prepare_data(imgs, lbls, subs,
+                                            img_size=[64, 64], one_hot=True, standardize=True)
+            return imgs, lbls, subs
+        else:
+            return NotImplementedError
+
+
 if __name__ == "__main__":
     # emotion_imgs("/home/mw/data/ck+/")
     gen = leave_one_out_gen("/home/mw/data/ck+/")
     for elem in gen:
         trn, tst = elem
         imgs, lbls = trn
+        print(imgs.dtype)
+        print(imgs.shape, lbls.shape)
+        imgs, lbls = tst
         print(imgs.shape, lbls.shape)
