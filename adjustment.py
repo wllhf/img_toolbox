@@ -4,8 +4,52 @@ This file contains basic functionality for the adjustment of images.
 from __future__ import division
 
 import numpy as np
+from scipy import ndimage as ndi
 
 from skimage import img_as_float
+import skimage.transform
+
+
+def resize(image, output_shape, order=1, mode='constant', cval=0, clip=True, preserve_range=False,
+           anti_aliasing=None, anti_aliasing_sigma=None):
+    """
+    Mimics functionality of function with same name of skimage v0.15. With skimage 0.15 this function gets obsolete.
+    """
+    if anti_aliasing is None:
+        anti_aliasing = True
+
+    output_shape = tuple(output_shape)
+    output_ndim = len(output_shape)
+    input_shape = image.shape
+    if output_ndim > image.ndim:
+        # append dimensions to input_shape
+        input_shape = input_shape + (1, ) * (output_ndim - image.ndim)
+        image = np.reshape(image, input_shape)
+    elif output_ndim == image.ndim - 1:
+        # multichannel case: append shape of last axis
+        output_shape = output_shape + (image.shape[-1], )
+    elif output_ndim < image.ndim - 1:
+        raise ValueError("len(output_shape) cannot be smaller than the image "
+                         "dimensions")
+
+    factors = (np.asarray(input_shape, dtype=float) / np.asarray(output_shape, dtype=float))
+
+    if anti_aliasing:
+        if anti_aliasing_sigma is None:
+            anti_aliasing_sigma = np.maximum(0, (factors - 1) / 2)
+        else:
+            anti_aliasing_sigma = \
+                np.atleast_1d(anti_aliasing_sigma) * np.ones_like(factors)
+            if np.any(anti_aliasing_sigma < 0):
+                raise ValueError("Anti-aliasing standard deviation must be "
+                                 "greater than or equal to zero")
+            elif np.any((anti_aliasing_sigma > 0) & (factors <= 1)):
+                print("Anti-aliasing standard deviation greater than zero but "
+                      "not down-sampling along all axes")
+
+        image = ndi.gaussian_filter(image, anti_aliasing_sigma, cval=cval, mode=mode)
+
+    return skimage.transform.resize(image, output_shape, order, mode, cval, clip, preserve_range)
 
 
 def per_image_standardization(images):
@@ -120,3 +164,34 @@ def crop_random(images, size, ncrops=1):
         new.append(crop(images=images, size=size, coords=c))
 
     return np.concatenate(new, axis=0)
+
+
+def crop_scale_random(images, ratio, ncrops=1):
+    """  UNTESTED. Crops images at random center coordinates.
+
+    Parameters:
+    -----------
+    images: numpy array (n, k, l, c), (n, k, l) or (k, l)
+      Images.
+    size: float
+      Scale for new image
+    ncrops: int (default: 1)
+      If > 1 multiple stacked crops are returned
+
+    Return:
+    -------
+    images: numpy array (n*ncrops, u, v, c)
+    """
+    if len(images.shape) == 2:
+        shape = (images.shape*ratio).astype('uint')
+        images = np.expand_dims(np.expand_dims(images, axis=0), axis=3)
+        return crop_random(images, shape, ncrops=ncrops)
+    elif len(images.shape) == 3:
+        shape = (images.shape[1:]*ratio).astype('uint')
+        images = np.expand_dims(images, axis=3)
+        return crop_random(images, shape, ncrops=ncrops)
+    elif len(images.shape) == 4:
+        shape = (images.shape[1:3]*ratio).astype('uint')
+        return crop_random(images, shape, ncrops=ncrops)
+    else:
+        raise ValueError("given image shape is not compatible")
