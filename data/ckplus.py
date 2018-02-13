@@ -2,7 +2,7 @@
 import os
 
 import numpy as np
-from skimage import img_as_float
+from skimage import img_as_float, img_as_uint
 from skimage.io import imread
 from skimage.color import rgb2gray
 from skimage.transform import resize
@@ -34,13 +34,22 @@ def emotion_imgs(path):
     return imgs, lbls, subs
 
 
-def prepare_data(imgs, lbls, subs, img_size=[64, 64], one_hot=True, standardize=True):
-    imgs = [np.expand_dims(rgb2gray(img), axis=2) for img in imgs]
-    imgs = [img_as_float(img) for img in imgs]
+def prepare_data(imgs, lbls, subs, img_size=[64, 64], integral=False, one_hot=True, standardize=True, chandim=False):
+    if img_size is not None:
+        imgs = [resize(img, img_size, mode='reflect') for img in imgs]
+
+    imgs = [rgb2gray(img) for img in imgs]
+
+    if chandim:
+        imgs = [np.expand_dims(img, axis=2) for img in imgs]
+
+    if integral:
+        imgs = [img_as_uint(img) for img in imgs]
+    else:
+        imgs = [img_as_float(img) for img in imgs]
     if standardize:
         imgs = [per_image_standardization(img) for img in imgs]
-    imgs = [resize(img, img_size, mode='reflect') for img in imgs]
-    imgs = np.array(imgs).astype('float32')
+
     lbls, subs = np.array(lbls), np.array(subs)
     if one_hot:
         lbls = one_hot_repr(lbls)
@@ -81,11 +90,16 @@ class leave_one_out_gen:
             raise StopIteration()
 
 
-def get_data(path, img_size=[64, 64], lbl_type='emo', one_hot=True, standardize=True):
+def get_data(path, lbl_type='emo', img_size=[64, 64], integral=True, one_hot=True, standardize=True, chandim=False):
         if lbl_type == 'emo':
             imgs, lbls, subs = emotion_imgs(path)
             imgs, lbls, subs = prepare_data(imgs, lbls, subs,
-                                            img_size=[64, 64], one_hot=True, standardize=True)
+                                            img_size=img_size,
+                                            integral=integral,
+                                            one_hot=one_hot,
+                                            standardize=standardize,
+                                            chandim=chandim)
+
             return imgs, lbls, subs
         else:
             return NotImplementedError
