@@ -193,7 +193,7 @@ def reshape(coords, values, shape):
     -----------
     coords: numpy array (n, 2)
       Coordinates of values.
-    values: numpy array (n, _)
+    values: array like (n, _)
     shape: array like (2,)
       Shape of image.
 
@@ -202,6 +202,8 @@ def reshape(coords, values, shape):
     matrix: numpy array
     """
     shape = (shape[0], shape[1])
+    if type(values) == list:
+        values = np.vstack(values)
     if len(values.shape) > 1:
         shape = (shape[0], shape[1], values.shape[1])
     matrix = np.zeros(shape, dtype=values.dtype)
