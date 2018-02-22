@@ -91,47 +91,93 @@ def per_image_standardization(images):
     return images
 
 
-def crop(images, size, coords=None):
+def flip_left_right(images):
+    """ Flips images.
+
+    Parameters:
+    -----------
+    images: numpy array (n, k, l, c), (k, l, c) or (k, l)
+      Images.
+
+    Return:
+    -------
+    new: numpy array (n, k, l, c), (k, l, c) or (k, l)
+      View of imgs with flipped images.
+
+    Raises:
+    -------
+    ValueError: if shape of images is incompatible with this function.
+    """
+    if len(images.shape) == 2:
+        return np.fliplr(images)
+    elif len(images.shape) == 3:
+        return np.fliplr(images)
+    elif len(images.shape) == 4:
+        new = []
+        for img in images:
+            new.append(np.fliplr(img))
+        return np.stack(new, axis=0)
+    else:
+        raise ValueError("given image shape is not compatible")
+
+
+def crop(images, size=None, ratio=None, coords=None):
     """ Crops images.
 
     Parameters:
     -----------
-    images: numpy array (n, k, l, c)
+    images: numpy array (n, k, l, c), (k, l, c) or (k, l)
       Images.
     size: array like (2,)
       Size of new images [u, v].
+    ratio: scalar float
+      Size of new image round(r*(k, l)).
     coords: array like (2,) (default: None)
       Center coordinates of resulting images. Defaults to center of original images.
 
     Return:
     -------
-    images: numpy array (n, u, v, c)
+    images: numpy array (n, u, v, c), (u, v, c) or (u, v)
 
     Raises:
     -------
     ValueError: if shape of images, coords or size is incompatible with this function or with each other.
     """
-    coords = np.array(images.shape[1:3])//2 if coords is None else np.array(coords)
-    size = np.array(size)
+    if size is None and ratio is None:
+        raise ValueError("size and ratio None")
+    if coords is not None and len(coords) != 2:
+        raise ValueError("given coords are not compatible (len(coords) != 2)")
+    if size is not None and len(size) != 2:
+        raise ValueError("given size is not compatible (len(size) != 2)")
 
-    if len(images.shape) != 4:
-        raise ValueError("given image shape is not compatible (!=4)")
-    if size.shape[0] != 2:
-        raise ValueError("given size is not compatible (!=2)")
-    if coords is not None and coords.shape[0] != 2:
-        raise ValueError("given coords are not compatible (!=2)")
+    if len(images.shape) == 2:
+        shape = np.array(images.shape)
+    elif len(images.shape) == 3:
+        shape = np.array(images.shape[:2])
+    elif len(images.shape) == 4:
+        shape = np.array(images.shape[1:3])
+    else:
+        raise ValueError("given image shape is not compatible")
 
+    size = np.round(shape*ratio).astype(np.int) if size is None else np.array(size)
+    coords = np.array(shape)//2 if coords is None else np.array(coords)
     s = coords - size//2
     e = coords + (size-1)//2 + 1
 
-    valid = ((0, 0) <= s) * (e <= images.shape[1:3])
-    if not valid.all():
+    if not (((0, 0) <= s) * (e <= shape)).all():
         raise ValueError("given images, coords and size incompatible")
 
-    return images[:, s[0]:e[0], s[1]:e[1], :]
+    if len(images.shape) == 2:
+        return images[s[0]:e[0], s[1]:e[1]]
+    elif len(images.shape) == 3:
+        return images[s[0]:e[0], s[1]:e[1], :]
+    elif len(images.shape) == 4:
+        return images[:, s[0]:e[0], s[1]:e[1], :]
+    else:
+        raise ValueError("given image shape is not compatible")
 
 
-def crop_random(images, size, ncrops=1):
+def crop_random(images, size=None, ncrops=1):
     """ Crops images at random center coordinates.
 
     Parameters:
@@ -164,34 +210,3 @@ def crop_random(images, size, ncrops=1):
         new.append(crop(images=images, size=size, coords=c))
 
     return np.concatenate(new, axis=0)
-
-
-def crop_scale_random(images, ratio, ncrops=1):
-    """  UNTESTED. Crops images at random center coordinates.
-
-    Parameters:
-    -----------
-    images: numpy array (n, k, l, c), (n, k, l) or (k, l)
-      Images.
-    size: float
-      Scale for new image
-    ncrops: int (default: 1)
-      If > 1 multiple stacked crops are returned
-
-    Return:
-    -------
-    images: numpy array (n*ncrops, u, v, c)
-    """
-    if len(images.shape) == 2:
-        shape = (images.shape*ratio).astype('uint')
-        images = np.expand_dims(np.expand_dims(images, axis=0), axis=3)
-        return crop_random(images, shape, ncrops=ncrops)
-    elif len(images.shape) == 3:
-        shape = (images.shape[1:]*ratio).astype('uint')
-        images = np.expand_dims(images, axis=3)
-        return crop_random(images, shape, ncrops=ncrops)
-    elif len(images.shape) == 4:
-        shape = (images.shape[1:3]*ratio).astype('uint')
-        return crop_random(images, shape, ncrops=ncrops)
-    else:
-        raise ValueError("given image shape is not compatible")
